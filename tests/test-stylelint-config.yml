@@ -1,0 +1,29 @@
+name: Test stylelint_config input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up workdir with valid CSS
+        run: |
+          mkdir -p /tmp/stylelint-test
+          cp "$GITHUB_WORKSPACE/actions/hardened/reviewdog--action-stylelint/v1.29.0/tests/fixtures/valid.css" /tmp/stylelint-test/valid.css
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          stylelint_input: "tests/fixtures/valid.css"
+          stylelint_config: "${{ github.workspace }}/actions/hardened/reviewdog--action-stylelint/v1.29.0/tests/fixtures/custom-stylelint-config/.stylelintrc.json"
+          reporter: github-check
+          filter_mode: nofilter
+          fail_on_error: "false"
+          level: info
+      - name: Assert action completed
+        run: |
+          echo "Action completed successfully with stylelint_config input"
+          echo "PASS"

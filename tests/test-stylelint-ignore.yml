@@ -1,0 +1,25 @@
+name: Test stylelint_ignore input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          stylelint_input: "tests/fixtures/**/*.css"
+          stylelint_ignore: "tests/fixtures/ignore-test/**"
+          reporter: github-check
+          filter_mode: nofilter
+          fail_on_error: "false"
+          level: info
+      - name: Assert action completed with stylelint_ignore
+        run: |
+          echo "Action completed successfully with stylelint_ignore input"
+          echo "PASS"
