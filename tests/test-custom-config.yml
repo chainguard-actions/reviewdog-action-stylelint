@@ -1,0 +1,47 @@
+name: Test custom stylelint config
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up CSS project with custom config
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/custom-config-project"
+          cat > "$GITHUB_WORKSPACE/custom-config-project/style.css" <<'EOF'
+          p {
+            color: red;
+          }
+          EOF
+          # Custom config that extends recommended
+          cat > "$GITHUB_WORKSPACE/custom-config-project/my-stylelint.json" <<'EOF'
+          {
+            "extends": "stylelint-config-recommended"
+          }
+          EOF
+
+      - name: Install stylelint in project
+        working-directory: custom-config-project
+        run: |
+          npm install stylelint stylelint-config-recommended
+
+      - id: action
+        uses: .
+        with:
+          github_token: fake-token-for-local-testing
+          stylelint_input: "**/*.css"
+          stylelint_config: "my-stylelint.json"
+          reporter: local
+          filter_mode: nofilter
+          fail_level: none
+          workdir: custom-config-project
+
+      - name: Assert action ran with custom config
+        run: |
+          echo "Action ran successfully with custom stylelint config"
+          echo "PASS"

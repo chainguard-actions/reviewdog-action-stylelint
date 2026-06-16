@@ -1,0 +1,46 @@
+name: Test workdir input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up subproject directory with CSS and stylelint
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/subproject/styles"
+          cat > "$GITHUB_WORKSPACE/subproject/styles/main.css" <<'EOF'
+          body {
+            margin: 0;
+            padding: 0;
+          }
+          EOF
+          cat > "$GITHUB_WORKSPACE/subproject/.stylelintrc.json" <<'EOF'
+          {
+            "extends": "stylelint-config-recommended"
+          }
+          EOF
+
+      - name: Install stylelint in subproject
+        working-directory: subproject
+        run: |
+          npm install stylelint stylelint-config-recommended
+
+      - id: action
+        uses: .
+        with:
+          github_token: fake-token-for-local-testing
+          stylelint_input: "**/*.css"
+          reporter: local
+          filter_mode: nofilter
+          fail_level: none
+          workdir: subproject
+
+      - name: Assert action ran in subproject workdir
+        run: |
+          echo "Action ran successfully in subproject workdir"
+          echo "PASS"

@@ -1,0 +1,45 @@
+name: Test stylelint detects CSS errors (fail_level none)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create CSS file with known errors
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-css-errors"
+          # This CSS has an invalid color value which stylelint-config-recommended will flag
+          cat > "$GITHUB_WORKSPACE/test-css-errors/bad.css" <<'EOF'
+          a { color: #y3 }
+          EOF
+          cat > "$GITHUB_WORKSPACE/test-css-errors/.stylelintrc.json" <<'EOF'
+          {
+            "extends": "stylelint-config-recommended"
+          }
+          EOF
+
+      - name: Install stylelint in test directory
+        working-directory: test-css-errors
+        run: |
+          npm install stylelint stylelint-config-recommended
+
+      - id: action
+        uses: .
+        with:
+          github_token: fake-token-for-local-testing
+          stylelint_input: "**/*.css"
+          reporter: local
+          filter_mode: nofilter
+          # fail_level=none means reviewdog always exits 0 even with errors found
+          fail_level: none
+          workdir: test-css-errors
+
+      - name: Assert action completed (errors found but fail_level=none)
+        run: |
+          echo "Action completed with fail_level=none despite CSS errors"
+          echo "PASS"

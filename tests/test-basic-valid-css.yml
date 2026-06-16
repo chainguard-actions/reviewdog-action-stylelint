@@ -1,0 +1,45 @@
+name: Test basic usage with valid CSS
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create valid CSS file for testing
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-css-valid"
+          cat > "$GITHUB_WORKSPACE/test-css-valid/valid.css" <<'EOF'
+          a {
+            color: pink;
+          }
+          EOF
+          cat > "$GITHUB_WORKSPACE/test-css-valid/.stylelintrc.json" <<'EOF'
+          {
+            "extends": "stylelint-config-recommended"
+          }
+          EOF
+
+      - name: Install stylelint in test directory
+        working-directory: test-css-valid
+        run: |
+          npm install stylelint stylelint-config-recommended
+
+      - id: action
+        uses: .
+        with:
+          github_token: fake-token-for-local-testing
+          stylelint_input: "**/*.css"
+          reporter: local
+          filter_mode: nofilter
+          fail_level: none
+          workdir: test-css-valid
+
+      - name: Assert action succeeded
+        run: |
+          echo "Action completed successfully"
+          echo "PASS"

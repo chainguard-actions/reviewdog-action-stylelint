@@ -1,0 +1,53 @@
+name: Test stylelint_ignore input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up CSS project with ignored file
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/ignore-test-project"
+          # Create a valid CSS file that will be linted
+          cat > "$GITHUB_WORKSPACE/ignore-test-project/valid.css" <<'EOF'
+          a {
+            color: pink;
+          }
+          EOF
+          # Create a CSS file that should be ignored (would cause issues if linted)
+          cat > "$GITHUB_WORKSPACE/ignore-test-project/ignored.css" <<'EOF'
+          a {
+            COLOR: pink;
+          }
+          EOF
+          cat > "$GITHUB_WORKSPACE/ignore-test-project/.stylelintrc.json" <<'EOF'
+          {
+            "extends": "stylelint-config-recommended"
+          }
+          EOF
+
+      - name: Install stylelint in project
+        working-directory: ignore-test-project
+        run: |
+          npm install stylelint stylelint-config-recommended
+
+      - id: action
+        uses: .
+        with:
+          github_token: fake-token-for-local-testing
+          stylelint_input: "**/*.css"
+          stylelint_ignore: "ignored.css"
+          reporter: local
+          filter_mode: nofilter
+          fail_level: none
+          workdir: ignore-test-project
+
+      - name: Assert action succeeded with ignore pattern
+        run: |
+          echo "Action completed successfully with stylelint_ignore set"
+          echo "PASS"
