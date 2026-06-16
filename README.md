@@ -9,6 +9,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
 | v1.29.0 | [`v1.29.0`](https://github.com/chainguard-actions/reviewdog-action-stylelint/tree/v1.29.0) | [`c1da6e7`](https://github.com/reviewdog/action-stylelint/commit/c1da6e75d890eba79f82a4294e867cbd720b52d9) |
+| v1.30.2 | [`v1.30.2`](https://github.com/chainguard-actions/reviewdog-action-stylelint/tree/v1.30.2) | [`dd2b435`](https://github.com/reviewdog/action-stylelint/commit/dd2b435cc6a7c82705307a9dee740c9bbaa10411) |
 
 ## Privacy
 
