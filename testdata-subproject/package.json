@@ -1,0 +1,24 @@
+{
+  "name": "action-stylelint",
+  "version": "1.0.0",
+  "description": "GitHub Action: Run stylelint with reviewdog",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reviewdog/action-stylelint.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/reviewdog/action-stylelint/issues"
+  },
+  "homepage": "https://github.com/reviewdog/action-stylelint#readme",
+  "devDependencies": {
+    "stylelint": "^17.13.0",
+    "stylelint-config-recommended": "^18.0.0"
+  }
+}

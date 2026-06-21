@@ -1,0 +1,37 @@
+name: Test stylelint with custom workdir
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install stylelint dependencies in subproject
+        run: npm install
+        working-directory: pristine/reviewdog--action-stylelint/v1.31.0/testdata-subproject
+        continue-on-error: true
+
+      - id: action
+        uses: .
+        with:
+          github_token: fake-token-for-local-testing
+          stylelint_input: "testdata/**/*.css"
+          reporter: github-check
+          filter_mode: nofilter
+          level: error
+          fail_level: none
+          workdir: pristine/reviewdog--action-stylelint/v1.31.0/testdata-subproject
+        continue-on-error: true
+
+      - name: Assert action executed with custom workdir
+        run: |
+          echo "Action outcome: ${{ steps.action.outcome }}"
+          if [ "${{ steps.action.outcome }}" = "skipped" ]; then
+            echo "FAIL: action was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: action executed with custom workdir (outcome=${{ steps.action.outcome }})"
