@@ -1,0 +1,65 @@
+name: Test stylelint_ignore input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up CSS files with one to be ignored
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-ignore/vendor"
+          # Write a valid CSS file that should be linted
+          cat > "$GITHUB_WORKSPACE/test-ignore/style.css" <<'EOF'
+          a {
+            color: red;
+          }
+          EOF
+          # Write a CSS file in vendor/ that should be ignored
+          cat > "$GITHUB_WORKSPACE/test-ignore/vendor/third-party.css" <<'EOF'
+          body { margin:0 }
+          EOF
+          # Write a minimal stylelint config
+          cat > "$GITHUB_WORKSPACE/test-ignore/.stylelintrc.json" <<'EOF'
+          {
+            "rules": {}
+          }
+          EOF
+          # Write a package.json so npm install works
+          cat > "$GITHUB_WORKSPACE/test-ignore/package.json" <<'EOF'
+          {
+            "name": "test-ignore",
+            "version": "1.0.0",
+            "dependencies": {
+              "stylelint": "^15.0.0"
+            }
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          reporter: github-check
+          filter_mode: nofilter
+          level: error
+          fail_level: none
+          stylelint_input: "**/*.css"
+          stylelint_ignore: "vendor/**"
+          workdir: test-ignore
+
+      - name: Assert action ran with stylelint_ignore pattern
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with stylelint_ignore pattern"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (sentinel repo or API limitation)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

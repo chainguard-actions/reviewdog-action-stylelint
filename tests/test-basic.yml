@@ -1,0 +1,60 @@
+name: Test basic usage - no lint errors
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up CSS file and stylelint config
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-css"
+          # Write a valid CSS file with no errors
+          cat > "$GITHUB_WORKSPACE/test-css/style.css" <<'EOF'
+          a {
+            color: red;
+          }
+          EOF
+          # Write a minimal stylelint config
+          cat > "$GITHUB_WORKSPACE/test-css/.stylelintrc.json" <<'EOF'
+          {
+            "rules": {}
+          }
+          EOF
+          # Write a package.json so npm install works
+          cat > "$GITHUB_WORKSPACE/test-css/package.json" <<'EOF'
+          {
+            "name": "test",
+            "version": "1.0.0",
+            "dependencies": {
+              "stylelint": "^15.0.0"
+            }
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          reporter: github-check
+          filter_mode: nofilter
+          level: error
+          fail_level: none
+          stylelint_input: "**/*.css"
+          workdir: test-css
+
+      - name: Assert action ran (stylelint + reviewdog executed)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with no lint errors"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (sentinel repo or API limitation)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

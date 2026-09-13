@@ -1,0 +1,67 @@
+name: Test fail_level with lint errors
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up CSS file with lint errors and strict stylelint config
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-fail"
+          # Write a CSS file with a known violation: color-no-invalid-hex
+          cat > "$GITHUB_WORKSPACE/test-fail/bad.css" <<'EOF'
+          a {
+            color: #zzz;
+          }
+          EOF
+          # Write a stylelint config that enforces color-no-invalid-hex
+          cat > "$GITHUB_WORKSPACE/test-fail/.stylelintrc.json" <<'EOF'
+          {
+            "rules": {
+              "color-no-invalid-hex": true
+            }
+          }
+          EOF
+          # Write a package.json so npm install works
+          cat > "$GITHUB_WORKSPACE/test-fail/package.json" <<'EOF'
+          {
+            "name": "test-fail",
+            "version": "1.0.0",
+            "dependencies": {
+              "stylelint": "^15.0.0"
+            }
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          reporter: github-check
+          filter_mode: nofilter
+          level: error
+          fail_level: error
+          stylelint_input: "**/*.css"
+          workdir: test-fail
+
+      - name: Assert action failed due to lint errors with fail_level=error
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With fail_level=error and a CSS file containing invalid hex color,
+          # reviewdog should exit 1 causing the action to fail.
+          # Under the sentinel repo, the action may also fail due to API limitations.
+          # Either way, failure is the expected outcome here.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (lint errors found or sentinel repo)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "FAIL: expected action to fail due to lint errors with fail_level=error"
+            exit 1
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

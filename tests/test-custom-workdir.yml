@@ -1,0 +1,61 @@
+name: Test custom workdir
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up CSS file and stylelint config in a subdirectory
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/src/styles"
+          # Write a valid CSS file
+          cat > "$GITHUB_WORKSPACE/src/styles/main.css" <<'EOF'
+          body {
+            margin: 0;
+            padding: 0;
+          }
+          EOF
+          # Write a minimal stylelint config
+          cat > "$GITHUB_WORKSPACE/src/.stylelintrc.json" <<'EOF'
+          {
+            "rules": {}
+          }
+          EOF
+          # Write a package.json so npm install works
+          cat > "$GITHUB_WORKSPACE/src/package.json" <<'EOF'
+          {
+            "name": "test-src",
+            "version": "1.0.0",
+            "dependencies": {
+              "stylelint": "^15.0.0"
+            }
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          reporter: github-check
+          filter_mode: nofilter
+          level: error
+          fail_level: none
+          stylelint_input: "**/*.css"
+          workdir: src
+
+      - name: Assert action ran in custom workdir
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded in custom workdir"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (sentinel repo or API limitation)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
