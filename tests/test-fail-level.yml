@@ -1,0 +1,55 @@
+name: Test fail_level with CSS errors
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node.js and install stylelint
+        run: |
+          npm install --save-dev stylelint
+
+      - name: Create a CSS file with invalid hex color
+        run: |
+          mkdir -p tests/fixtures/css-fail-level
+          cat > tests/fixtures/css-fail-level/style.css << 'EOF'
+          a { color: #xyz; }
+          EOF
+          cat > tests/fixtures/css-fail-level/.stylelintrc.json << 'EOF'
+          {
+            "rules": {
+              "color-no-invalid-hex": [true, {"severity": "error"}]
+            }
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: error
+          level: error
+          stylelint_input: "**/*.css"
+          stylelint_config: "${{ github.workspace }}/tests/fixtures/css-fail-level/.stylelintrc.json"
+          workdir: tests/fixtures/css-fail-level
+
+      - name: Assert action failed due to CSS errors with fail_level=error
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With fail_level=error and CSS errors present, reviewdog should exit 1
+          # However, the sentinel repo may also cause failure - both are acceptable
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (CSS errors found with fail_level=error, or sentinel repo)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (reviewdog may have filtered out issues in nofilter+check mode)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

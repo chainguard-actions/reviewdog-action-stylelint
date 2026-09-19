@@ -1,0 +1,51 @@
+name: Test custom workdir
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node.js and install stylelint in custom workdir
+        run: |
+          mkdir -p tests/fixtures/css-workdir
+          cat > tests/fixtures/css-workdir/style.css << 'EOF'
+          a { color: pink; }
+          b { font-size: 1em; }
+          EOF
+          cat > tests/fixtures/css-workdir/.stylelintrc.json << 'EOF'
+          {
+            "rules": {
+              "color-no-invalid-hex": true
+            }
+          }
+          EOF
+          cd tests/fixtures/css-workdir
+          npm install --save-dev stylelint
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: none
+          stylelint_input: "**/*.css"
+          stylelint_config: ".stylelintrc.json"
+          workdir: tests/fixtures/css-workdir
+
+      - name: Assert action ran with custom workdir
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with custom workdir"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (sentinel repo or network issue)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

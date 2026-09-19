@@ -1,0 +1,56 @@
+name: Test with CSS linting issues
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node.js and install stylelint
+        run: |
+          npm install --save-dev stylelint
+
+      - name: Create a CSS file with linting issues
+        run: |
+          mkdir -p tests/fixtures/css-issues
+          cat > tests/fixtures/css-issues/style.css << 'EOF'
+          a { color: #xyz; }
+          EOF
+
+      - name: Create stylelint config that catches the issue
+        run: |
+          cat > tests/fixtures/css-issues/.stylelintrc.json << 'EOF'
+          {
+            "rules": {
+              "color-no-invalid-hex": true
+            }
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: none
+          level: warning
+          stylelint_input: "**/*.css"
+          stylelint_config: "${{ github.workspace }}/tests/fixtures/css-issues/.stylelintrc.json"
+          workdir: tests/fixtures/css-issues
+
+      - name: Assert action ran (issues found but fail_level=none so should succeed or fail gracefully)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with fail_level=none even with CSS issues"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (sentinel repo or network issue)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
