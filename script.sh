@@ -6,17 +6,25 @@ export REVIEWDOG_GITHUB_API_TOKEN="${INPUT_GITHUB_TOKEN}"
 STYLELINT_FORMATTER="${GITHUB_ACTION_PATH}/stylelint-formatter-rdjson/index.js"
 
 __run_stylelint() {
-  set -- "${INPUT_STYLELINT_INPUT}" --custom-formatter "${STYLELINT_FORMATTER}"
+  # Build stylelint arguments safely.
+  # INPUT_STYLELINT_INPUT is a whitespace-separated list of globs/files;
+  # use xargs to tokenize it into separate arguments.
+  set --
+  set -- "$@" --custom-formatter "${STYLELINT_FORMATTER}"
 
   if [ -n "${INPUT_STYLELINT_CONFIG}" ]; then
-    set -- "$@" --config "${INPUT_STYLELINT_CONFIG}"
+    set -- "$@" "--config=${INPUT_STYLELINT_CONFIG}"
   fi
 
   if [ -n "${INPUT_STYLELINT_IGNORE}" ]; then
-    set -- "$@" --ignore-pattern "${INPUT_STYLELINT_IGNORE}"
+    set -- "$@" "--ignore-pattern=${INPUT_STYLELINT_IGNORE}"
   fi
 
-  npx --no-install stylelint "$@" 2>&1
+  if [ -n "${INPUT_STYLELINT_INPUT}" ]; then
+    printf '%s' "${INPUT_STYLELINT_INPUT}" | xargs npx --no-install stylelint "$@" 2>&1
+  else
+    npx --no-install stylelint "$@" 2>&1
+  fi
 }
 
 __run_reviewdog() {
@@ -35,7 +43,6 @@ echo '::group:: Installing reviewdog 🐶 ... https://github.com/reviewdog/revie
 INSTALL_SCRIPT="$(mktemp)"
 curl -sfL https://raw.githubusercontent.com/reviewdog/reviewdog/fd59714416d6d9a1c0692d872e38e7f8448df4fc/install.sh -o "${INSTALL_SCRIPT}"
 sh "${INSTALL_SCRIPT}" -b "${TEMP_PATH}" "${REVIEWDOG_VERSION}" 2>&1
-rm -f "${INSTALL_SCRIPT}"
 echo '::endgroup::'
 
 npx --no-install -c 'stylelint --version'
@@ -47,10 +54,8 @@ fi
 
 if [ -n "${INPUT_PACKAGES}" ]; then
   echo '::group:: Running `npm install` to install input packages ...'
-  set --
-  while IFS= read -r -d '' t; do set -- "$@" "$t"; done \
-    < <(printf '%s' "${INPUT_PACKAGES}" | xargs printf '%s\0')
-  npm install "$@"
+  # INPUT_PACKAGES is a whitespace-separated list of package names; tokenize safely.
+  printf '%s' "${INPUT_PACKAGES}" | xargs npm install
   echo '::endgroup::'
 fi
 

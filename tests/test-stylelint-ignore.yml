@@ -14,13 +14,13 @@ jobs:
       - name: Create CSS files for testing
         run: |
           mkdir -p tests/fixtures/css-ignore
-          # Clean CSS file that should pass
-          cat > tests/fixtures/css-ignore/style.css << 'EOF'
-          a { color: pink; }
-          EOF
-          # CSS file with an invalid hex that would fail if not ignored
+          # This file has an invalid hex color — it would fail linting
           cat > tests/fixtures/css-ignore/bad.css << 'EOF'
           a { color: #gggggg; }
+          EOF
+          # This file is clean
+          cat > tests/fixtures/css-ignore/good.css << 'EOF'
+          a { color: pink; }
           EOF
 
       - name: Create stylelint config
@@ -52,7 +52,7 @@ jobs:
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded with stylelint_ignore set (bad.css was ignored)"
+            echo "PASS: action succeeded — bad.css was ignored by stylelint_ignore"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (sentinel repo or network issue)"
           else
