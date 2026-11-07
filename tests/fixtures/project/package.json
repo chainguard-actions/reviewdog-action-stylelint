@@ -1,0 +1,9 @@
+{
+  "name": "stylelint-fixture-project",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "stylelint": "^16.0.0",
+    "stylelint-config-recommended": "^14.0.0"
+  }
+}
