@@ -8,7 +8,7 @@ STYLELINT_FORMATTER="${GITHUB_ACTION_PATH}/stylelint-formatter-rdjson/index.js"
 __run_stylelint() {
   input_args=()
   if [ -n "${INPUT_STYLELINT_INPUT}" ]; then
-    # Quote-aware split (upstream passed this through `sh -c`), without evaluation.
+    # Quote-aware split (upstream passed this through a shell via `npx -c`), without evaluation.
     printf '%s' "${INPUT_STYLELINT_INPUT}" | xargs -r true >/dev/null || return 1
     while IFS= read -r -d '' t; do input_args+=("$t"); done \
       < <(printf '%s' "${INPUT_STYLELINT_INPUT}" | xargs -r sh -c 'printf "%s\0" "$@"' sh)
@@ -58,8 +58,8 @@ fi
 
 if [ -n "${INPUT_PACKAGES}" ]; then
   echo '::group:: Running `npm install` to install input packages ...'
-  pkg_args=()
-  read -r -d '' -a pkg_args <<< "${INPUT_PACKAGES}" || true
+  # shellcheck disable=SC2206
+  pkg_args=(${INPUT_PACKAGES})   # same split and glob as upstream's unquoted ${INPUT_PACKAGES}
   npm install "${pkg_args[@]}"
   echo '::endgroup::'
 fi
