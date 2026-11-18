@@ -6,12 +6,14 @@ export REVIEWDOG_GITHUB_API_TOKEN="${INPUT_GITHUB_TOKEN}"
 STYLELINT_FORMATTER="${GITHUB_ACTION_PATH}/stylelint-formatter-rdjson/index.js"
 
 __run_stylelint() {
-  # Tokenize INPUT_STYLELINT_INPUT (a whitespace-separated list of files/globs)
-  # into an array using xargs for proper quote-aware splitting.
+  # Upstream pasted INPUT_STYLELINT_INPUT into a shell command string (npx -c),
+  # so the shell honored quotes in it. Tokenize quote-aware with xargs, without
+  # evaluating anything.
   stylelint_inputs=()
   if [ -n "${INPUT_STYLELINT_INPUT}" ]; then
+    printf '%s' "${INPUT_STYLELINT_INPUT}" | xargs -r true >/dev/null || return 1
     while IFS= read -r -d '' t; do stylelint_inputs+=("$t"); done \
-      < <(printf '%s' "${INPUT_STYLELINT_INPUT}" | xargs printf '%s\0')
+      < <(printf '%s' "${INPUT_STYLELINT_INPUT}" | xargs -r sh -c 'printf "%s\0" "$@"' sh)
   fi
 
   cmd=(stylelint "${stylelint_inputs[@]}" --custom-formatter "${STYLELINT_FORMATTER}")
@@ -24,7 +26,7 @@ __run_stylelint() {
     cmd+=(--ignore-pattern="${INPUT_STYLELINT_IGNORE}")
   fi
 
-  "${cmd[@]}" 2>&1
+  npx --no-install "${cmd[@]}" 2>&1
 }
 
 __run_reviewdog() {
@@ -55,11 +57,8 @@ fi
 
 if [ -n "${INPUT_PACKAGES}" ]; then
   echo '::group:: Running `npm install` to install input packages ...'
-  # Tokenize INPUT_PACKAGES (a whitespace-separated list) into an array
-  # using xargs for proper quote-aware splitting.
-  packages=()
-  while IFS= read -r -d '' t; do packages+=("$t"); done \
-    < <(printf '%s' "${INPUT_PACKAGES}" | xargs printf '%s\0')
+  # shellcheck disable=SC2206
+  packages=(${INPUT_PACKAGES})   # same split and glob as upstream's unquoted ${INPUT_PACKAGES}
   npm install "${packages[@]}"
   echo '::endgroup::'
 fi
